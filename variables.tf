@@ -13,8 +13,32 @@ variable "vpc_id" {
 }
 
 variable "access_key" {
-  description = "Sysdig access key"
+  description = "Sysdig Access Key as clear text"
   type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "access_key_secretsmanager_reference" {
+  description = "Sysdig Access Key as SecretsManager-backed secret reference"
+  type        = string
+  default     = ""
+  sensitive   = true
+
+  validation {
+    # Expected pattern "arn:aws:secretsmanager:region:accountId:secret:secretName[:jsonKey:versionStage:versionId]"
+    condition = (var.access_key_secretsmanager_reference == ""
+      || can(regex("arn:aws:secretsmanager:[^:]+:[^:]+:secret:[^:]+(:[^:]*:[^:]*:[^:]*)?", var.access_key_secretsmanager_reference))
+    )
+    error_message = "The string did not match the expected pattern 'arn:aws:secretsmanager:region:accountId:secret:secretName[:jsonKey:versionStage:versionId]'"
+  }
+}
+
+locals {
+  validate_access_key_source = (
+    (var.access_key == "" && var.access_key_secretsmanager_reference == "")
+    || (var.access_key != "" && var.access_key_secretsmanager_reference != "")
+  ) ? tobool("Please, provide either 'access_key' or 'access_key_secretsmanager_reference'") : true
 }
 
 variable "subnets" {
